@@ -19,6 +19,8 @@ Usage of hcr:
         The GitHub pages branch (default "gh-pages")
   -remote string
         The Git remote for the GitHub Pages branch (default "origin")
+  -tag string
+        Release tag, defaults to chart version
   -token string
         GitHub Auth Token
 ```

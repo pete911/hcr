@@ -10,6 +10,7 @@ import (
 type flags struct {
 	pagesBranch string
 	chartsDir   string
+	tag         string
 	remote      string
 	token       string
 }
@@ -20,6 +21,7 @@ func ParseFlags() (hcr.Config, error) {
 
 	flagSet.StringVar(&f.pagesBranch, "pages-branch", getStringEnv("HCR_PAGES_BRANCH", "gh-pages"), "The GitHub pages branch")
 	flagSet.StringVar(&f.chartsDir, "charts-dir", getStringEnv("HCR_CHARTS_DIR", "charts"), "The Helm charts location")
+	flagSet.StringVar(&f.tag, "tag", getStringEnv("HCR_TAG", ""), "Release tag, defaults to chart version")
 	flagSet.StringVar(&f.remote, "remote", getStringEnv("HCR_REMOTE", "origin"), "The Git remote for the GitHub Pages branch")
 	flagSet.StringVar(&f.token, "token", getStringEnv("HCR_TOKEN", ""), "GitHub Auth Token")
 
@@ -34,6 +36,7 @@ func ParseFlags() (hcr.Config, error) {
 	return hcr.Config{
 		PagesBranch: f.pagesBranch,
 		ChartsDir:   f.chartsDir,
+		Tag:         f.tag,
 		Remote:      f.remote,
 		Token:       f.token,
 	}, nil

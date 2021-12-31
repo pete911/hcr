@@ -86,18 +86,21 @@ func (r Releaser) releaseAndUpdateIndex(ctx context.Context, ghPagesDir string, 
 	var updated bool
 	indexFile := filepath.Join(ghPagesDir, "index.yaml")
 	for chPath, ch := range charts {
-		tag := fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version)
+		tag := r.config.Tag
+		if tag == "" {
+			tag = ch.Metadata.Version
+		}
 		ok, err := r.ghClient.ReleaseExists(ctx, owner, repo, tag)
 		if err != nil {
-			return false, fmt.Errorf("release %s exists: %w", tag, err)
+			return false, fmt.Errorf("%s release %s exists: %w", ch.Name(), tag, err)
 		}
 		if ok {
-			r.log.Info(fmt.Sprintf("release %s already exists, skipping", tag))
+			r.log.Info(fmt.Sprintf("%s release %s already exists, skipping", ch.Name(), tag))
 			continue
 		}
 
 		release := github.Release{
-			Name:        tag,
+			Name:        fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version),
 			Description: fmt.Sprintf("Kubernetes %s Helm chart", ch.Name()),
 			AssetPath:   chPath,
 			PreRelease:  false,
