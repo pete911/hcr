@@ -103,7 +103,7 @@ func (r Releaser) releaseAndUpdateIndex(ctx context.Context, ghPagesDir string, 
 			Name:        fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version),
 			Description: fmt.Sprintf("Kubernetes %s Helm chart", ch.Name()),
 			AssetPath:   chPath,
-			PreRelease:  false,
+			PreRelease:  r.config.PreRelease,
 		}
 		assetUrl, err := r.ghClient.CreateRelease(ctx, owner, repo, tag, release)
 		if err != nil {

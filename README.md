@@ -17,6 +17,8 @@ Usage of hcr:
         The Helm charts location (default "charts")
   -pages-branch string
         The GitHub pages branch (default "gh-pages")
+  -pre-release
+        Whether the (chart) release should be marked as pre-release
   -remote string
         The Git remote for the GitHub Pages branch (default "origin")
   -tag string

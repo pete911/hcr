@@ -5,11 +5,13 @@ import (
 	"flag"
 	"github.com/pete911/hcr/internal/hcr"
 	"os"
+	"strconv"
 )
 
 type flags struct {
 	pagesBranch string
 	chartsDir   string
+	preRelease  bool
 	tag         string
 	remote      string
 	token       string
@@ -21,6 +23,7 @@ func ParseFlags() (hcr.Config, error) {
 
 	flagSet.StringVar(&f.pagesBranch, "pages-branch", getStringEnv("HCR_PAGES_BRANCH", "gh-pages"), "The GitHub pages branch")
 	flagSet.StringVar(&f.chartsDir, "charts-dir", getStringEnv("HCR_CHARTS_DIR", "charts"), "The Helm charts location")
+	flagSet.BoolVar(&f.preRelease, "pre-release", getBoolEnv("HCR_PRE_RELEASE", false), "Whether the (chart) release should be marked as pre-release")
 	flagSet.StringVar(&f.tag, "tag", getStringEnv("HCR_TAG", ""), "Release tag, defaults to chart version")
 	flagSet.StringVar(&f.remote, "remote", getStringEnv("HCR_REMOTE", "origin"), "The Git remote for the GitHub Pages branch")
 	flagSet.StringVar(&f.token, "token", getStringEnv("HCR_TOKEN", ""), "GitHub Auth Token")
@@ -36,6 +39,7 @@ func ParseFlags() (hcr.Config, error) {
 	return hcr.Config{
 		PagesBranch: f.pagesBranch,
 		ChartsDir:   f.chartsDir,
+		PreRelease:  f.preRelease,
 		Tag:         f.tag,
 		Remote:      f.remote,
 		Token:       f.token,
@@ -61,4 +65,16 @@ func getStringEnv(envName string, defaultValue string) string {
 		return defaultValue
 	}
 	return env
+}
+
+func getBoolEnv(envName string, defaultValue bool) bool {
+	env, ok := os.LookupEnv(envName)
+	if !ok {
+		return defaultValue
+	}
+
+	if v, err := strconv.ParseBool(env); err == nil {
+		return v
+	}
+	return defaultValue
 }
