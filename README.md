@@ -15,9 +15,10 @@ a release asset and the index file is hosted on GitHub page. This tool is very s
 ### Go
 - clone `git clone https://github.com/pete911/hcr.git && cd hcr`
 - install `go install`
-```
 
 ## Use
+
+### Local
 ```
 Usage of hcr:
   -charts-dir string
@@ -36,6 +37,36 @@ Usage of hcr:
         GitHub Auth Token
   -version
         Print hcr version
+```
+
+### GitHub action
+This is an example of how hcr can be used as a GitHub action, it is safe to run it on every commit, only commits with
+changes to `Chart.yaml` `version` field will trigger release.
+
+```yaml
+name: helm-release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Download chart releaser
+        run: |
+          curl -sSLo hcr.tar.gz "https://github.com/pete911/hcr/releases/download/v0.0.1/hcr_0.0.1_linux_amd64.tar.gz"
+          tar -xzf hcr.tar.gz
+          rm -f hcr.tar.gz
+      - name: Package and release chart
+        run: |
+          git config user.email "gh-action@users.noreply.github.com"
+          git config user.name "gh-action"
+          ./hcr -token "${{ secrets.GITHUB_TOKEN }}"
 ```
 
 Simply run `hcr` inside the project, this will:
