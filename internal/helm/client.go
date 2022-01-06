@@ -25,12 +25,13 @@ func NewClient(log *zap.Logger) Client {
 	return Client{log: log, pkg: action.NewPackage()}
 }
 
-func (c Client) PackageCharts(chartsDir string) (map[string]*chart.Chart, error) {
+func (c Client) PackageCharts(chartsDir string) (charts map[string]*chart.Chart, cleanup func(), err error) {
 	files, err := ioutil.ReadDir(chartsDir)
 	if err != nil {
-		return nil, fmt.Errorf("read charts directory: %w", err)
+		return nil, nil, fmt.Errorf("read charts directory: %w", err)
 	}
 
+	var paths []string
 	chs := make(map[string]*chart.Chart)
 	for _, file := range files {
 		if !file.IsDir() {
@@ -38,11 +39,21 @@ func (c Client) PackageCharts(chartsDir string) (map[string]*chart.Chart, error)
 		}
 		path, ch, err := c.PackageChart(filepath.Join(chartsDir, file.Name()))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		paths = append(paths, path)
 		chs[path] = ch
 	}
-	return chs, nil
+
+	cleanup = func() {
+		for _, p := range paths {
+			if err := os.Remove(p); err != nil {
+				c.log.Warn(fmt.Sprintf("remove %s chart: %v", p, err))
+			}
+			c.log.Info(fmt.Sprintf("removed generated chart %s", p))
+		}
+	}
+	return chs, cleanup, nil
 }
 
 // PackageChart package given chart in current working directory (<name>-<version>.tgz) and return packaged chart

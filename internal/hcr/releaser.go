@@ -13,21 +13,29 @@ import (
 )
 
 type Releaser struct {
-	gitClient  git.Client
-	ghClient   github.Client
-	helmClient helm.Client
-	config     Config
-	log        *zap.Logger
+	gitClient        git.Client
+	ghClient         github.Client
+	helmClient       helm.Client
+	ghPagesDir       string
+	ghPagesIndexPath string
+	config           Config
+	log              *zap.Logger
 }
 
-func NewReleaser(log *zap.Logger, config Config) Releaser {
-	return Releaser{
-		gitClient:  git.NewClient(log),
-		ghClient:   github.NewClient(log, config.Token),
-		helmClient: helm.NewClient(log),
-		config:     config,
-		log:        log,
+func NewReleaser(log *zap.Logger, config Config) (Releaser, error) {
+	ghPagesDir, err := os.MkdirTemp("", "gh-pages")
+	if err != nil {
+		return Releaser{}, fmt.Errorf("create gh-pages tmp dir: %w", err)
 	}
+	return Releaser{
+		gitClient:        git.NewClient(log),
+		ghClient:         github.NewClient(log, config.Token),
+		helmClient:       helm.NewClient(log),
+		ghPagesDir:       ghPagesDir,
+		ghPagesIndexPath: filepath.Join(ghPagesDir, "index.yaml"),
+		config:           config,
+		log:              log,
+	}, nil
 }
 
 func (r Releaser) Release(ctx context.Context) error {
@@ -38,21 +46,22 @@ func (r Releaser) Release(ctx context.Context) error {
 	r.log.Info("github pages remote branch exists")
 
 	// package charts
-	charts, err := r.helmClient.PackageCharts(r.config.ChartsDir)
+	charts, chartsCleanup, err := r.helmClient.PackageCharts(r.config.ChartsDir)
 	if err != nil {
 		return fmt.Errorf("package charts: %w", err)
 	}
+	defer chartsCleanup()
 	r.log.Info("charts packaged")
 
 	// add GitHub pages worktree (so we can update index)
-	ghPagesDir, cleanup, err := r.addPagesWorktree()
+	worktreeCleanup, err := r.addPagesWorktree()
 	if err != nil {
 		return err
 	}
-	defer cleanup()
+	defer worktreeCleanup()
 
 	// release charts and update index
-	ok, err := r.releaseAndUpdateIndex(ctx, ghPagesDir, charts)
+	ok, err := r.releaseChartsAndUpdateIndex(ctx, charts)
 	if err != nil {
 		return err
 	}
@@ -63,10 +72,10 @@ func (r Releaser) Release(ctx context.Context) error {
 	r.log.Info("released charts and updated index")
 
 	// commit and push index
-	if err := r.gitClient.AddAndCommit(ghPagesDir, "index.yaml", "update index.yaml"); err != nil {
+	if err := r.gitClient.AddAndCommit(r.ghPagesDir, "index.yaml", "update index.yaml"); err != nil {
 		return fmt.Errorf("git commit index to github pages: %w", err)
 	}
-	if err := r.gitClient.Push(ghPagesDir, r.config.Remote, r.config.PagesBranch, r.config.Token); err != nil {
+	if err := r.gitClient.Push(r.ghPagesDir, r.config.Remote, r.config.PagesBranch, r.config.Token); err != nil {
 		return fmt.Errorf("git push github pages: %w", err)
 	}
 
@@ -74,45 +83,15 @@ func (r Releaser) Release(ctx context.Context) error {
 	return nil
 }
 
-// releaseAndUpdateIndex releases helm chart as GitHub releases and updates index file in GitHub pages. If the charts
+// releaseChartsAndUpdateIndex releases helm chart as GitHub releases and updates index file in GitHub pages. If the charts
 // were updated, true and nil error is returned. If there are no charts updated, false and nil error is returned.
 // This method does not commit and push gh pages index file, only updates it.
-func (r Releaser) releaseAndUpdateIndex(ctx context.Context, ghPagesDir string, charts map[string]*chart.Chart) (bool, error) {
-	owner, repo, err := r.gitClient.GetOwnerAndRepo(ghPagesDir, r.config.Remote)
-	if err != nil {
-		return false, fmt.Errorf("get github owner and repo: %w", err)
-	}
-
+func (r Releaser) releaseChartsAndUpdateIndex(ctx context.Context, charts map[string]*chart.Chart) (bool, error) {
 	var updated bool
-	indexFile := filepath.Join(ghPagesDir, "index.yaml")
 	for chPath, ch := range charts {
-		tag := r.config.Tag
-		if tag == "" {
-			tag = ch.Metadata.Version
-		}
-		ok, err := r.ghClient.ReleaseExists(ctx, owner, repo, tag)
+		ok, err := r.releaseChartAndUpdateIndex(ctx, chPath, ch)
 		if err != nil {
-			return false, fmt.Errorf("%s release %s exists: %w", ch.Name(), tag, err)
-		}
-		if ok {
-			r.log.Info(fmt.Sprintf("%s release %s already exists, skipping", ch.Name(), tag))
-			continue
-		}
-
-		release := github.Release{
-			Name:        fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version),
-			Description: fmt.Sprintf("Kubernetes %s Helm chart", ch.Name()),
-			AssetPath:   chPath,
-			PreRelease:  r.config.PreRelease,
-		}
-		assetUrl, err := r.ghClient.CreateRelease(ctx, owner, repo, tag, release)
-		if err != nil {
-			return false, fmt.Errorf("create %s release: %w", tag, err)
-		}
-
-		ok, err = r.helmClient.UpdateIndex(indexFile, chPath, ch, assetUrl)
-		if err != nil {
-			return false, fmt.Errorf("update %s index file: %w", indexFile, err)
+			return false, err
 		}
 		if ok {
 			updated = true
@@ -121,24 +100,63 @@ func (r Releaser) releaseAndUpdateIndex(ctx context.Context, ghPagesDir string, 
 	return updated, nil
 }
 
-func (r Releaser) addPagesWorktree() (ghPagesDir string, cleanup func(), err error) {
-	ghPagesDir, err = os.MkdirTemp("", "gh-pages")
+func (r Releaser) releaseChartAndUpdateIndex(ctx context.Context, chartPath string, ch *chart.Chart) (bool, error) {
+	owner, repo, err := r.gitClient.GetOwnerAndRepo(r.ghPagesDir, r.config.Remote)
 	if err != nil {
-		return "", nil, fmt.Errorf("create gh-pages tmp dir: %w", err)
+		return false, fmt.Errorf("get github owner and repo: %w", err)
 	}
-	if err := r.gitClient.AddWorktree(ghPagesDir, r.config.Remote, r.config.PagesBranch); err != nil {
-		return "", nil, fmt.Errorf("add gh-pages worktree: %w", err)
+
+	tag := r.config.Tag
+	if tag == "" {
+		tag = ch.Metadata.Version
 	}
-	r.log.Info(fmt.Sprintf("added github pages %s worktree to %s", r.config.PagesBranch, ghPagesDir))
+
+	ok, err := r.ghClient.ReleaseExists(ctx, owner, repo, tag)
+	if err != nil {
+		return false, fmt.Errorf("%s release %s exists: %w", ch.Name(), tag, err)
+	}
+	if ok {
+		r.log.Info(fmt.Sprintf("%s release %s already exists, skipping", ch.Name(), tag))
+		return false, nil
+	}
+	if r.config.DryRun {
+		r.log.Info(fmt.Sprintf("%s release %s skipping, dry-run set to true", ch.Name(), tag))
+		r.log.Info(fmt.Sprintf("update %s index skipping, dry-run set to true", r.ghPagesIndexPath))
+		return false, nil
+	}
+
+	release := github.Release{
+		Name:        fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version),
+		Description: fmt.Sprintf("Kubernetes %s Helm chart", ch.Name()),
+		AssetPath:   chartPath,
+		PreRelease:  r.config.PreRelease,
+	}
+	assetUrl, err := r.ghClient.CreateRelease(ctx, owner, repo, tag, release)
+	if err != nil {
+		return false, fmt.Errorf("create %s release: %w", tag, err)
+	}
+
+	ok, err = r.helmClient.UpdateIndex(r.ghPagesIndexPath, chartPath, ch, assetUrl)
+	if err != nil {
+		return false, fmt.Errorf("update %s index file: %w", r.ghPagesIndexPath, err)
+	}
+	return ok, nil
+}
+
+func (r Releaser) addPagesWorktree() (cleanup func(), err error) {
+	if err := r.gitClient.AddWorktree(r.ghPagesDir, r.config.Remote, r.config.PagesBranch); err != nil {
+		return nil, fmt.Errorf("add gh-pages worktree: %w", err)
+	}
+	r.log.Info(fmt.Sprintf("added github pages %s worktree to %s", r.config.PagesBranch, r.ghPagesDir))
 
 	cleanup = func() {
-		if err := r.gitClient.RemoveWorktree(ghPagesDir); err != nil {
-			r.log.Error(fmt.Sprintf("remove github pages %s worktree %s: %v", r.config.PagesBranch, ghPagesDir, err))
+		if err := r.gitClient.RemoveWorktree(r.ghPagesDir); err != nil {
+			r.log.Error(fmt.Sprintf("remove github pages %s worktree %s: %v", r.config.PagesBranch, r.ghPagesDir, err))
 			return
 		}
-		r.log.Info(fmt.Sprintf("removed github pages %s worktree %s", r.config.PagesBranch, ghPagesDir))
+		r.log.Info(fmt.Sprintf("removed github pages %s worktree %s", r.config.PagesBranch, r.ghPagesDir))
 	}
-	return ghPagesDir, cleanup, nil
+	return cleanup, nil
 }
 
 func (r Releaser) pagesRemoteBranchExists() error {

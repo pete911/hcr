@@ -15,6 +15,8 @@ go install
 Usage of hcr:
   -charts-dir string
         The Helm charts location (default "charts")
+  -dry-run
+        Whether to skip release update gh-pages index update
   -pages-branch string
         The GitHub pages branch (default "gh-pages")
   -pre-release

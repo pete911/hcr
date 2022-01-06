@@ -23,7 +23,11 @@ func main() {
 	}
 	log.Info(config.String())
 
-	if err := hcr.NewReleaser(log, config).Release(context.TODO()); err != nil {
+	releaser, err := hcr.NewReleaser(log, config)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("new releaser: %v", err))
+	}
+	if err := releaser.Release(context.TODO()); err != nil {
 		log.Fatal(fmt.Sprintf("release: %v", err))
 	}
 }
