@@ -9,16 +9,12 @@ a release asset and the index file is hosted on GitHub page. This tool is very s
 ## Install
 
 ### Brew
-```
-add tap brew tap pete911/tap
-install brew install hcr
-```
+- add tap `brew tap pete911/tap`
+- install `brew install hcr`
 
 ### Go
-```
-git clone https://github.com/pete911/hcr.git
-cd hcr
-go install
+- clone `git clone https://github.com/pete911/hcr.git && cd hcr`
+- install `go install`
 ```
 
 ## Use
