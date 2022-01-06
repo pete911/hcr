@@ -10,6 +10,7 @@ type Config struct {
 	Remote      string
 	Token       string
 	DryRun      bool
+	Version     bool
 }
 
 func (c Config) String() string {

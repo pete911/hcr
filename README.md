@@ -27,6 +27,8 @@ Usage of hcr:
         Release tag, defaults to chart version
   -token string
         GitHub Auth Token
+  -version
+        Print hcr version
 ```
 
 Simply run `hcr` inside the project, this will:

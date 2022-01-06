@@ -16,6 +16,7 @@ type flags struct {
 	remote      string
 	token       string
 	dryRun      bool
+	version     bool
 }
 
 func ParseFlags() (hcr.Config, error) {
@@ -29,6 +30,7 @@ func ParseFlags() (hcr.Config, error) {
 	flagSet.StringVar(&f.remote, "remote", getStringEnv("HCR_REMOTE", "origin"), "The Git remote for the GitHub Pages branch")
 	flagSet.StringVar(&f.token, "token", getStringEnv("HCR_TOKEN", ""), "GitHub Auth Token")
 	flagSet.BoolVar(&f.dryRun, "dry-run", getBoolEnv("HCR_DRY_RUN", false), "Whether to skip release update gh-pages index update")
+	flagSet.BoolVar(&f.version, "version", getBoolEnv("HCR_VERSION", false), "Print hcr version")
 
 	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		return hcr.Config{}, err
@@ -46,6 +48,7 @@ func ParseFlags() (hcr.Config, error) {
 		Remote:      f.remote,
 		Token:       f.token,
 		DryRun:      f.dryRun,
+		Version:     f.version,
 	}, nil
 }
 

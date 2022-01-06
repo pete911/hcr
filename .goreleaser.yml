@@ -1,0 +1,41 @@
+builds:
+  -
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -X main.Version={{.Version}}
+checksum:
+  name_template: 'checksums.txt'
+dist: releases
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+release:
+  github:
+    owner: pete911
+    name: hcr
+brews:
+  - tap:
+      owner: pete911
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    name: hcr
+    homepage: "https://github.com/pete911/hcr"
+    description: "GitHub pages helm chart releaser."
+    folder: Formula
+    install: |
+      bin.install "hcr"
+    test: |
+      assert_match /Usage/, shell_output("#{bin}/hcr -h", 0)

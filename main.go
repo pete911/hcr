@@ -10,6 +10,8 @@ import (
 	"os"
 )
 
+var Version = "dev"
+
 func main() {
 	log, err := logger.NewZapLogger(zapcore.InfoLevel)
 	if err != nil {
@@ -21,8 +23,12 @@ func main() {
 	if err != nil {
 		return
 	}
-	log.Info(config.String())
+	if config.Version {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
 
+	log.Info(config.String())
 	releaser, err := hcr.NewReleaser(log, config)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("new releaser: %v", err))
