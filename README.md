@@ -10,6 +10,11 @@ git rm -rf .
 git commit -m "initial commit" --allow-empty
 git push -u origin gh-pages`
 ```
+After the branch has been created go to GitHub `settings -> pages -> source -> select branch -> gh-pages`.
+
+If the GitHub pages are private, you need to use github token to add helm repo (generate read only token for this):
+- add `helm repo add <repo-name> "https://<token>@raw.githubusercontent.com/<owner>/<repo>/gh-pages"`
+
 Branch (`gh-pages`) and remote (`origin`) can be different. They can be set by `-pages-branch` and `-remote` flags when
 running hcr.
 
