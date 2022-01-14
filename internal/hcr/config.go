@@ -1,10 +1,15 @@
 package hcr
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/pete911/hcr/internal/helm"
+	"github.com/pete911/hcr/internal/utils"
+)
 
 type Config struct {
 	PagesBranch string
 	ChartsDir   string
+	HelmConfig  helm.Config
 	PreRelease  bool
 	Tag         string
 	Remote      string
@@ -14,10 +19,6 @@ type Config struct {
 }
 
 func (c Config) String() string {
-	token := "*****"
-	if len(c.Token) == 0 {
-		token = "<empty>"
-	}
-	return fmt.Sprintf("pages-branch: %q, charts-dir: %q, pre-release: %t, tag: %q, remote: %q, token: %q, dry-run: %t",
-		c.PagesBranch, c.ChartsDir, c.PreRelease, c.Tag, c.Remote, token, c.DryRun)
+	return fmt.Sprintf("pages-branch: %q, charts-dir: %q, pre-release: %t, tag: %q, remote: %q, token: %s, dry-run: %t, helm-config: %s",
+		c.PagesBranch, c.ChartsDir, c.PreRelease, c.Tag, c.Remote, utils.SecretValue(c.Token), c.DryRun, c.HelmConfig)
 }

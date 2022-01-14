@@ -40,6 +40,14 @@ Usage of hcr:
         The Helm charts location, can be specific chart (default "charts")
   -dry-run
         Whether to skip release update gh-pages index update
+  -helm-key string
+        Name of the key to use when signing. Used if --sign is true
+  -helm-keyring string
+        Location of a public keyring
+  -helm-passphrase-file string
+        Location of a file which contains the passphrase for the signing key
+  -helm-sign
+        Use a PGP private key to sign this package
   -pages-branch string
         The GitHub pages branch (default "gh-pages")
   -pre-release

@@ -30,7 +30,7 @@ func NewReleaser(log *zap.Logger, config Config) (Releaser, error) {
 	return Releaser{
 		gitClient:        git.NewClient(log),
 		ghClient:         github.NewClient(log, config.Token),
-		helmClient:       helm.NewClient(log),
+		helmClient:       helm.NewClient(log, config.HelmConfig),
 		ghPagesDir:       ghPagesDir,
 		ghPagesIndexPath: filepath.Join(ghPagesDir, "index.yaml"),
 		config:           config,

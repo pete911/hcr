@@ -3,6 +3,7 @@ package helm
 import (
 	"errors"
 	"fmt"
+	"github.com/pete911/hcr/internal/utils"
 	"go.uber.org/zap"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -16,13 +17,33 @@ import (
 	"time"
 )
 
+type Config struct {
+	Sign           bool
+	Key            string
+	Keyring        string
+	PassphraseFile string
+}
+
+func (c Config) String() string {
+	return fmt.Sprintf("sign: %t, key: %s, keyring: %s, passphrase-file: %s",
+		c.Sign, utils.SecretValue(c.Key), utils.SecretValue(c.Keyring), utils.SecretValue(c.PassphraseFile))
+}
+
 type Client struct {
 	pkg *action.Package
 	log *zap.Logger
 }
 
-func NewClient(log *zap.Logger) Client {
-	return Client{log: log, pkg: action.NewPackage()}
+func NewClient(log *zap.Logger, config Config) Client {
+	return Client{
+		pkg: &action.Package{
+			Sign:           config.Sign,
+			Key:            config.Key,
+			Keyring:        config.Keyring,
+			PassphraseFile: config.PassphraseFile,
+		},
+		log: log,
+	}
 }
 
 func (c Client) PackageCharts(chartsDir string) (charts map[string]*chart.Chart, cleanup func(), err error) {
