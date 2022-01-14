@@ -38,17 +38,17 @@ func NewReleaser(log *zap.Logger, config Config) (Releaser, error) {
 	}, nil
 }
 
-func (r Releaser) Release(ctx context.Context) error {
+func (r Releaser) Release(ctx context.Context) (map[string]*chart.Chart, error) {
 	// check if the remote GitHub pages branch exists
 	if err := r.pagesRemoteBranchExists(); err != nil {
-		return err
+		return nil, err
 	}
 	r.log.Info("github pages remote branch exists")
 
 	// package charts
 	charts, chartsCleanup, err := r.helmClient.PackageCharts(r.config.ChartsDir)
 	if err != nil {
-		return fmt.Errorf("package charts: %w", err)
+		return nil, fmt.Errorf("package charts: %w", err)
 	}
 	defer chartsCleanup()
 	r.log.Info("charts packaged")
@@ -56,31 +56,31 @@ func (r Releaser) Release(ctx context.Context) error {
 	// add GitHub pages worktree (so we can update index)
 	worktreeCleanup, err := r.addPagesWorktree()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer worktreeCleanup()
 
 	// release charts and update index
 	ok, err := r.releaseChartsAndUpdateIndex(ctx, charts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !ok {
 		r.log.Info("no chart changes")
-		return nil
+		return nil, nil
 	}
 	r.log.Info("released charts and updated index")
 
 	// commit and push index
 	if err := r.gitClient.AddAndCommit(r.ghPagesDir, "index.yaml", "update index.yaml"); err != nil {
-		return fmt.Errorf("git commit index to github pages: %w", err)
+		return nil, fmt.Errorf("git commit index to github pages: %w", err)
 	}
 	if err := r.gitClient.Push(r.ghPagesDir, r.config.Remote, r.config.PagesBranch, r.config.Token); err != nil {
-		return fmt.Errorf("git push github pages: %w", err)
+		return nil, fmt.Errorf("git push github pages: %w", err)
 	}
 
 	r.log.Info("index updated and pushed to github pages")
-	return nil
+	return charts, nil
 }
 
 // releaseChartsAndUpdateIndex releases helm chart as GitHub releases and updates index file in GitHub pages. If the charts
@@ -106,11 +106,7 @@ func (r Releaser) releaseChartAndUpdateIndex(ctx context.Context, chartPath stri
 		return false, fmt.Errorf("get github owner and repo: %w", err)
 	}
 
-	tag := r.config.Tag
-	if tag == "" {
-		tag = ch.Metadata.Version
-	}
-
+	tag := r.GetReleaseTag(ch)
 	ok, err := r.ghClient.ReleaseExists(ctx, owner, repo, tag)
 	if err != nil {
 		return false, fmt.Errorf("%s release %s exists: %w", ch.Name(), tag, err)
@@ -141,6 +137,13 @@ func (r Releaser) releaseChartAndUpdateIndex(ctx context.Context, chartPath stri
 		return false, fmt.Errorf("update %s index file: %w", r.ghPagesIndexPath, err)
 	}
 	return ok, nil
+}
+
+func (r Releaser) GetReleaseTag(ch *chart.Chart) string {
+	if r.config.Tag != "" {
+		return r.config.Tag
+	}
+	return ch.Metadata.Version
 }
 
 func (r Releaser) addPagesWorktree() (cleanup func(), err error) {
