@@ -82,7 +82,7 @@ jobs:
           fetch-depth: 0
       - name: Download chart releaser
         run: |
-          curl -sSLo hcr.tar.gz "https://github.com/pete911/hcr/releases/download/v0.0.1/hcr_0.0.1_linux_amd64.tar.gz"
+          curl -sSLo hcr.tar.gz "https://github.com/pete911/hcr/releases/download/v0.0.2/hcr_0.0.2_linux_amd64.tar.gz"
           tar -xzf hcr.tar.gz
           rm -f hcr.tar.gz
       - name: Package and release chart
