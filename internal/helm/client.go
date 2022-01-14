@@ -9,7 +9,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/provenance"
 	"helm.sh/helm/v3/pkg/repo"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,31 +26,28 @@ func NewClient(log *zap.Logger) Client {
 }
 
 func (c Client) PackageCharts(chartsDir string) (charts map[string]*chart.Chart, cleanup func(), err error) {
-	files, err := ioutil.ReadDir(chartsDir)
+	chartsPaths, err := c.getChartsPaths(chartsDir)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read charts directory: %w", err)
+		return nil, nil, err
 	}
 
-	var paths []string
+	var packagedChartsPaths []string
 	chs := make(map[string]*chart.Chart)
-	for _, file := range files {
-		if !file.IsDir() {
-			continue
-		}
-		path, ch, err := c.PackageChart(filepath.Join(chartsDir, file.Name()))
+	for _, chartPath := range chartsPaths {
+		packagedChartPath, ch, err := c.PackageChart(chartPath)
 		if err != nil {
 			return nil, nil, err
 		}
-		paths = append(paths, path)
-		chs[path] = ch
+		packagedChartsPaths = append(packagedChartsPaths, packagedChartPath)
+		chs[packagedChartPath] = ch
 	}
 
 	cleanup = func() {
-		for _, p := range paths {
-			if err := os.Remove(p); err != nil {
-				c.log.Warn(fmt.Sprintf("remove %s chart: %v", p, err))
+		for _, packagedChartPath := range packagedChartsPaths {
+			if err := os.Remove(packagedChartPath); err != nil {
+				c.log.Warn(fmt.Sprintf("remove %s chart: %v", packagedChartPath, err))
 			}
-			c.log.Info(fmt.Sprintf("removed generated chart %s", p))
+			c.log.Info(fmt.Sprintf("removed generated chart %s", packagedChartPath))
 		}
 	}
 	return chs, cleanup, nil
@@ -121,4 +118,18 @@ func (c Client) loadIndexFile(filePath string) (*repo.IndexFile, error) {
 	}
 	c.log.Info(fmt.Sprintf("loaded %s index file", filePath))
 	return indexFile, nil
+}
+
+// getChartsPaths walks supplied charts dir recursively and returns parent directories of all 'Chart.yaml' files
+func (c Client) getChartsPaths(chartsDir string) ([]string, error) {
+	var paths []string
+	if err := filepath.WalkDir(chartsDir, func(path string, d fs.DirEntry, err error) error {
+		if !d.IsDir() && d.Name() == "Chart.yaml" {
+			paths = append(paths, filepath.Dir(path))
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return paths, nil
 }

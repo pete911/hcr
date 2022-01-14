@@ -24,7 +24,7 @@ func ParseFlags() (hcr.Config, error) {
 	var f flags
 
 	flagSet.StringVar(&f.pagesBranch, "pages-branch", getStringEnv("HCR_PAGES_BRANCH", "gh-pages"), "The GitHub pages branch")
-	flagSet.StringVar(&f.chartsDir, "charts-dir", getStringEnv("HCR_CHARTS_DIR", "charts"), "The Helm charts location")
+	flagSet.StringVar(&f.chartsDir, "charts-dir", getStringEnv("HCR_CHARTS_DIR", "charts"), "The Helm charts location, can be specific chart")
 	flagSet.BoolVar(&f.preRelease, "pre-release", getBoolEnv("HCR_PRE_RELEASE", false), "Whether the (chart) release should be marked as pre-release")
 	flagSet.StringVar(&f.tag, "tag", getStringEnv("HCR_TAG", ""), "Release tag, defaults to chart version")
 	flagSet.StringVar(&f.remote, "remote", getStringEnv("HCR_REMOTE", "origin"), "The Git remote for the GitHub Pages branch")

@@ -37,7 +37,7 @@ running hcr.
 ```
 Usage of hcr:
   -charts-dir string
-        The Helm charts location (default "charts")
+        The Helm charts location, can be specific chart (default "charts")
   -dry-run
         Whether to skip release update gh-pages index update
   -pages-branch string
