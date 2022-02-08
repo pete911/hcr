@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/google/go-github/v36 v36.0.0
-	go.uber.org/zap v1.20.0
+	go.uber.org/zap v1.21.0
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	helm.sh/helm/v3 v3.8.0
 )
