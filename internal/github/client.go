@@ -32,58 +32,80 @@ func NewClient(log *zap.Logger, token string) Client {
 	return Client{log: log, gh: github.NewClient(tc)}
 }
 
-// ReleaseExists checks if the release already exists
-func (c Client) ReleaseExists(ctx context.Context, owner, repo, tag string) (bool, error) {
-	_, _, err := c.gh.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
-	if err == nil {
-		return true, nil
-	}
-
-	if ghError, ok := err.(*github.ErrorResponse); ok {
-		if ghError.Response.StatusCode == http.StatusNotFound {
-			return false, nil
+// ReleaseAndAssetExists checks if the release and asset already exists
+func (c Client) ReleaseAndAssetExists(ctx context.Context, owner, repo, tag, assetPath string) (bool, bool, error) {
+	release, _, err := c.gh.Repositories.GetReleaseByTag(ctx, owner, repo, tag)
+	if err != nil {
+		// release does not exist (no assets)
+		if ghError, ok := err.(*github.ErrorResponse); ok && ghError.Response.StatusCode == http.StatusNotFound {
+			return false, false, nil
 		}
 	}
-	return false, err
+
+	for _, asset := range release.Assets {
+		if asset == nil {
+			continue
+		}
+		if asset.GetName() == assetPath {
+			return true, true, nil
+		}
+	}
+	return true, false, err
 }
 
-// CreateRelease creates release and returns asset url
-func (c Client) CreateRelease(ctx context.Context, owner, repo, tag string, release Release) (string, error) {
+// CreateRelease creates release (if it doesn't exist) and returns release id
+func (c Client) CreateRelease(ctx context.Context, release Release, dryRun bool) (int64, error) {
+	existingRelease, _, err := c.gh.Repositories.GetReleaseByTag(ctx, release.Owner, release.Repo, release.Tag)
+	if err == nil {
+		c.log.Info(fmt.Sprintf("%s release %s already exists, skipping create release", release.Name, release.Tag))
+		return existingRelease.GetID(), nil
+	}
+	if err != nil {
+		// not a gitHub error and not 404
+		if ghError, ok := err.(*github.ErrorResponse); !ok || ghError.Response.StatusCode != http.StatusNotFound {
+			return 0, fmt.Errorf("get release by %s tag: %w", release.Tag, err)
+		}
+	}
+	if dryRun {
+		c.log.Info(fmt.Sprintf("%s create release %s skipping, dry run is set to true", release.Name, release.Tag))
+		return 0, nil
+	}
 
 	request := &github.RepositoryRelease{
 		Name:       &release.Name,
 		Body:       &release.Description,
-		TagName:    &tag,
+		TagName:    &release.Tag,
 		Prerelease: &release.PreRelease,
 	}
 
-	response, _, err := c.gh.Repositories.CreateRelease(ctx, owner, repo, request)
+	response, _, err := c.gh.Repositories.CreateRelease(ctx, release.Owner, release.Repo, request)
 	if err != nil {
-		return "", err
+		return 0, fmt.Errorf("%s create release %s: %w", release.Name, release.Tag, err)
 	}
-	c.log.Info(fmt.Sprintf("release %s created", release.Name))
-
-	// upload assets
-	url, err := c.uploadAsset(ctx, owner, repo, *response.ID, release.AssetPath)
-	if err != nil {
-		return "", fmt.Errorf("upload release asset %s: %w", release.AssetPath, err)
-	}
-	c.log.Info(fmt.Sprintf("asset %s uploaded", release.AssetPath))
-	return url, nil
+	c.log.Info(fmt.Sprintf("%s release %s with id %d created", release.Name, release.Tag, response.GetID()))
+	return response.GetID(), nil
 }
 
-func (c Client) uploadAsset(ctx context.Context, owner, repo string, id int64, assetPath string) (string, error) {
-	f, err := os.Open(assetPath)
+// UploadAsset upload asset and return asset download url
+func (c Client) UploadAsset(ctx context.Context, releaseId int64, release Release) (string, error) {
+	existingRelease, _, err := c.gh.Repositories.GetRelease(ctx, release.Owner, release.Repo, releaseId)
+	if err != nil {
+		return "", fmt.Errorf("get release by %d id: %w", releaseId, err)
+	}
+	for _, asset := range existingRelease.Assets {
+		if asset != nil && asset.GetName() == release.AssetPath {
+			c.log.Info(fmt.Sprintf("%s release %s asset %s already exists, skipping create asset", release.Name, release.Tag, asset.GetBrowserDownloadURL()))
+			return asset.GetBrowserDownloadURL(), nil
+		}
+	}
+
+	f, err := os.Open(release.AssetPath)
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			c.log.Warn(fmt.Sprintf("close %s asset file: %v", assetPath, err))
-		}
-	}()
+	defer f.Close()
 
-	opts := &github.UploadOptions{Name: assetPath}
-	asset, _, err := c.gh.Repositories.UploadReleaseAsset(ctx, owner, repo, id, opts, f)
+	opts := &github.UploadOptions{Name: release.AssetPath}
+	asset, _, err := c.gh.Repositories.UploadReleaseAsset(ctx, release.Owner, release.Repo, releaseId, opts, f)
 	return asset.GetBrowserDownloadURL(), err
 }

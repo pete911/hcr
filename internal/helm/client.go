@@ -75,20 +75,20 @@ func (c Client) PackageCharts(chartsDir string) (charts map[string]*chart.Chart,
 }
 
 // PackageChart package given chart in current working directory (<name>-<version>.tgz) and return packaged chart
-// location and metadata
-func (c Client) PackageChart(path string) (string, *chart.Chart, error) {
-	c.log.Info(fmt.Sprintf("start package %s chart", path))
-	packagedChart, err := c.pkg.Run(path, nil)
+// path and metadata
+func (c Client) PackageChart(chartPath string) (string, *chart.Chart, error) {
+	c.log.Info(fmt.Sprintf("start package %s chart", chartPath))
+	packagedChartPath, err := c.pkg.Run(chartPath, nil)
 	if err != nil {
-		return "", nil, fmt.Errorf("package chart at %s path: %w", path, err)
+		return "", nil, fmt.Errorf("package chart at %s path: %w", chartPath, err)
 	}
-	c.log.Info(fmt.Sprintf("chart %s packaged as %s", path, packagedChart))
-	ch, err := loader.LoadFile(packagedChart)
+	c.log.Info(fmt.Sprintf("chart %s packaged as %s", chartPath, packagedChartPath))
+	ch, err := loader.LoadFile(packagedChartPath)
 	if err != nil {
 		return "", nil, fmt.Errorf("load chart: %w", err)
 	}
 	c.log.Info(fmt.Sprintf("chart %s loaded", ch.Name()))
-	return packagedChart, ch, nil
+	return packagedChartPath, ch, nil
 }
 
 // UpdateIndex at the specified location with given chart. Base URL is url without chart name.
@@ -100,7 +100,7 @@ func (c Client) UpdateIndex(indexFilePath, archiveChartPath string, chart *chart
 
 	// chart already exists in the index
 	if _, err := indexFile.Get(chart.Name(), chart.Metadata.Version); err == nil {
-		c.log.Info(fmt.Sprintf("index file get %s %s: %v", chart.Name(), chart.Metadata.Version, err))
+		c.log.Info(fmt.Sprintf("chart %s %s already exists in the helm index", chart.Name(), chart.Metadata.Version))
 		return false, nil
 	}
 

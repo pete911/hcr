@@ -50,5 +50,7 @@ func main() {
 		log.Error(fmt.Sprintf("marshal released charts info: %v", err))
 		return
 	}
-	fmt.Println(string(b))
+	if b != nil {
+		fmt.Println(string(b))
+	}
 }

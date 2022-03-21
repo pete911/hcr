@@ -106,33 +106,32 @@ func (r Releaser) releaseChartAndUpdateIndex(ctx context.Context, chartPath stri
 		return false, fmt.Errorf("get github owner and repo: %w", err)
 	}
 
-	tag := r.GetReleaseTag(ch)
-	ok, err := r.ghClient.ReleaseExists(ctx, owner, repo, tag)
-	if err != nil {
-		return false, fmt.Errorf("%s release %s exists: %w", ch.Name(), tag, err)
-	}
-	if ok {
-		r.log.Info(fmt.Sprintf("%s release %s already exists, skipping", ch.Name(), tag))
-		return false, nil
-	}
-	if r.config.DryRun {
-		r.log.Info(fmt.Sprintf("%s release %s skipping, dry-run set to true", ch.Name(), tag))
-		r.log.Info(fmt.Sprintf("update %s index skipping, dry-run set to true", r.ghPagesIndexPath))
-		return false, nil
-	}
-
 	release := github.Release{
+		Owner:       owner,
+		Repo:        repo,
+		Tag:         r.GetReleaseTag(ch),
 		Name:        fmt.Sprintf("%s-%s", ch.Name(), ch.Metadata.Version),
 		Description: fmt.Sprintf("Kubernetes %s Helm chart", ch.Name()),
 		AssetPath:   chartPath,
 		PreRelease:  r.config.PreRelease,
 	}
-	assetUrl, err := r.ghClient.CreateRelease(ctx, owner, repo, tag, release)
+	releaseId, err := r.ghClient.CreateRelease(ctx, release, r.config.DryRun)
 	if err != nil {
-		return false, fmt.Errorf("create %s release: %w", tag, err)
+		return false, err
+	}
+	// releaseId is set to 0 if dry run is set to true, upload asset would fail to get release and verify assets
+	if r.config.DryRun {
+		r.log.Info(fmt.Sprintf("%s release %s upload asset skipping, dry run is set to true", release.Name, release.Tag))
+		r.log.Info(fmt.Sprintf("update %s index skipping, dry-run set to true", r.ghPagesIndexPath))
+		return false, nil
 	}
 
-	ok, err = r.helmClient.UpdateIndex(r.ghPagesIndexPath, chartPath, ch, assetUrl)
+	assetUrl, err := r.ghClient.UploadAsset(ctx, releaseId, release)
+	if err != nil {
+		return false, err
+	}
+
+	ok, err := r.helmClient.UpdateIndex(r.ghPagesIndexPath, chartPath, ch, assetUrl)
 	if err != nil {
 		return false, fmt.Errorf("update %s index file: %w", r.ghPagesIndexPath, err)
 	}
