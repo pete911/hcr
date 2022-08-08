@@ -95,7 +95,7 @@ func (c Client) UploadAsset(ctx context.Context, releaseId int64, release Releas
 	for _, asset := range existingRelease.Assets {
 		if asset != nil && asset.GetName() == release.AssetPath {
 			c.log.Info(fmt.Sprintf("%s release %s asset %s already exists, skipping create asset", release.Name, release.Tag, asset.GetBrowserDownloadURL()))
-			return asset.GetBrowserDownloadURL(), nil
+			return asset.GetURL(), nil
 		}
 	}
 
@@ -107,5 +107,5 @@ func (c Client) UploadAsset(ctx context.Context, releaseId int64, release Releas
 
 	opts := &github.UploadOptions{Name: release.AssetPath}
 	asset, _, err := c.gh.Repositories.UploadReleaseAsset(ctx, release.Owner, release.Repo, releaseId, opts, f)
-	return asset.GetBrowserDownloadURL(), err
+	return asset.GetURL(), nil
 }
