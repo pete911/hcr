@@ -1,7 +1,7 @@
 # hcr
 Helm chart releaser is a tool to help to host helm repository as GitHub page, where packaged chart is uploaded as
 a release asset and the index file is hosted on GitHub page. This tool is very similar to
-[helm chart releaser](https://github.com/helm/chart-releaser), but is simpler and works with private repos as well.
+[helm chart releaser](https://github.com/helm/chart-releaser), but is simpler and ~~works with private repos as well~~.
 
 Projects are expected to have empty GitHub pages branch already created, run the following to set up the branch:
 ```shell
