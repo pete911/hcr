@@ -107,5 +107,5 @@ func (c Client) UploadAsset(ctx context.Context, releaseId int64, release Releas
 
 	opts := &github.UploadOptions{Name: release.AssetPath}
 	asset, _, err := c.gh.Repositories.UploadReleaseAsset(ctx, release.Owner, release.Repo, releaseId, opts, f)
-	return asset.GetURL(), nil
+	return asset.GetURL(), err
 }
