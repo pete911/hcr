@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v36 v36.0.0
 	go.uber.org/zap v1.22.0
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
-	helm.sh/helm/v3 v3.9.2
+	helm.sh/helm/v3 v3.9.3
 )
 
 require (
@@ -31,7 +31,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
+	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/fatih/color v1.13.0 // indirect
@@ -128,7 +128,7 @@ require (
 	k8s.io/client-go v0.24.2 // indirect
 	k8s.io/component-base v0.24.2 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20220413171646-5e7f5fdc6da6 // indirect
+	k8s.io/kube-openapi v0.0.0-20220627174259-011e075b9cb8 // indirect
 	k8s.io/kubectl v0.24.2 // indirect
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	oras.land/oras-go v1.2.0 // indirect
