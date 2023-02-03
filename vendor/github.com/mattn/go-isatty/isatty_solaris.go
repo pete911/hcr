@@ -1,5 +1,5 @@
-//go:build solaris && !appengine
-// +build solaris,!appengine
+// +build solaris
+// +build !appengine
 
 package isatty
 
@@ -8,14 +8,9 @@ import (
 )
 
 // IsTerminal returns true if the given file descriptor is a terminal.
-// see: https://src.illumos.org/source/xref/illumos-gate/usr/src/lib/libc/port/gen/isatty.c
+// see: http://src.illumos.org/source/xref/illumos-gate/usr/src/lib/libbc/libc/gen/common/isatty.c
 func IsTerminal(fd uintptr) bool {
-	_, err := unix.IoctlGetTermio(int(fd), unix.TCGETA)
+	var termio unix.Termio
+	err := unix.IoctlSetTermio(int(fd), unix.TCGETA, &termio)
 	return err == nil
-}
-
-// IsCygwinTerminal return true if the file descriptor is a cygwin or msys2
-// terminal. This is also always false on this environment.
-func IsCygwinTerminal(fd uintptr) bool {
-	return false
 }

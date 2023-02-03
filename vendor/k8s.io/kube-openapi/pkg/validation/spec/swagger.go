@@ -75,8 +75,15 @@ func (s *Swagger) UnmarshalNextJSON(opts jsonv2.UnmarshalOptions, dec *jsonv2.De
 	if err := opts.UnmarshalNext(dec, &x); err != nil {
 		return err
 	}
-	s.Extensions = internal.SanitizeExtensions(x.Extensions)
+
+	s.Extensions = x.Extensions
 	s.SwaggerProps = x.SwaggerProps
+
+	s.Extensions.sanitize()
+	if len(s.Extensions) == 0 {
+		s.Extensions = nil
+	}
+
 	return nil
 }
 

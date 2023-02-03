@@ -105,10 +105,13 @@ func (i *Items) UnmarshalNextJSON(opts jsonv2.UnmarshalOptions, dec *jsonv2.Deco
 	if err := i.Refable.Ref.fromMap(x.Extensions); err != nil {
 		return err
 	}
-
+	x.Extensions.sanitize()
+	if len(x.Extensions) == 0 {
+		x.Extensions = nil
+	}
 	i.CommonValidations = x.CommonValidations
 	i.SimpleSchema = x.SimpleSchema
-	i.Extensions = internal.SanitizeExtensions(x.Extensions)
+	i.VendorExtensible.Extensions = x.Extensions
 	return nil
 }
 

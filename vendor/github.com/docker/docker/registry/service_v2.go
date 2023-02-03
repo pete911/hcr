@@ -7,8 +7,10 @@ import (
 	"github.com/docker/go-connections/tlsconfig"
 )
 
-func (s *defaultService) lookupV2Endpoints(hostname string) (endpoints []APIEndpoint, err error) {
-	ana := s.config.allowNondistributableArtifacts(hostname)
+func (s *DefaultService) lookupV2Endpoints(hostname string) (endpoints []APIEndpoint, err error) {
+	tlsConfig := tlsconfig.ServerDefault()
+
+	ana := allowNondistributableArtifacts(s.config, hostname)
 
 	if hostname == DefaultNamespace || hostname == IndexHostname {
 		for _, mirror := range s.config.Mirrors {
@@ -17,9 +19,9 @@ func (s *defaultService) lookupV2Endpoints(hostname string) (endpoints []APIEndp
 			}
 			mirrorURL, err := url.Parse(mirror)
 			if err != nil {
-				return nil, invalidParam(err)
+				return nil, err
 			}
-			mirrorTLSConfig, err := newTLSConfig(mirrorURL.Host, s.config.isSecureIndex(mirrorURL.Host))
+			mirrorTLSConfig, err := s.tlsConfigForMirror(mirrorURL)
 			if err != nil {
 				return nil, err
 			}
@@ -36,7 +38,7 @@ func (s *defaultService) lookupV2Endpoints(hostname string) (endpoints []APIEndp
 			Version:      APIVersion2,
 			Official:     true,
 			TrimHostname: true,
-			TLSConfig:    tlsconfig.ServerDefault(),
+			TLSConfig:    tlsConfig,
 
 			AllowNondistributableArtifacts: ana,
 		})
@@ -44,7 +46,7 @@ func (s *defaultService) lookupV2Endpoints(hostname string) (endpoints []APIEndp
 		return endpoints, nil
 	}
 
-	tlsConfig, err := newTLSConfig(hostname, s.config.isSecureIndex(hostname))
+	tlsConfig, err = s.tlsConfig(hostname)
 	if err != nil {
 		return nil, err
 	}

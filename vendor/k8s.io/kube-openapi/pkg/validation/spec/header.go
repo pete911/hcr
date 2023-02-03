@@ -94,8 +94,12 @@ func (h *Header) UnmarshalNextJSON(opts jsonv2.UnmarshalOptions, dec *jsonv2.Dec
 
 	h.CommonValidations = x.CommonValidations
 	h.SimpleSchema = x.SimpleSchema
-	h.Extensions = internal.SanitizeExtensions(x.Extensions)
+	h.Extensions = x.Extensions
 	h.HeaderProps = x.HeaderProps
 
+	h.Extensions.sanitize()
+	if len(h.Extensions) == 0 {
+		h.Extensions = nil
+	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package zstd
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -19,10 +20,7 @@ type dict struct {
 	content []byte
 }
 
-const dictMagic = "\x37\xa4\x30\xec"
-
-// Maximum dictionary size for the reference implementation (1.5.3) is 2 GiB.
-const dictMaxLength = 1 << 31
+var dictMagic = [4]byte{0x37, 0xa4, 0x30, 0xec}
 
 // ID returns the dictionary id or 0 if d is nil.
 func (d *dict) ID() uint32 {
@@ -52,7 +50,7 @@ func loadDict(b []byte) (*dict, error) {
 		ofDec: sequenceDec{fse: &fseDecoder{}},
 		mlDec: sequenceDec{fse: &fseDecoder{}},
 	}
-	if string(b[:4]) != dictMagic {
+	if !bytes.Equal(b[:4], dictMagic[:]) {
 		return nil, ErrMagicMismatch
 	}
 	d.id = binary.LittleEndian.Uint32(b[4:8])
@@ -84,7 +82,7 @@ func loadDict(b []byte) (*dict, error) {
 			println("Transform table error:", err)
 			return err
 		}
-		if debugDecoder || debugEncoder {
+		if debug {
 			println("Read table ok", "symbolLen:", dec.symbolLen)
 		}
 		// Set decoders as predefined so they aren't reused.
