@@ -711,6 +711,34 @@ func (fn *Function) Param(i int) (string, syntax.Position) {
 	id := fn.funcode.Locals[i]
 	return id.Name, id.Pos
 }
+
+// ParamDefault returns the default value of the specified parameter
+// (0 <= i < NumParams()), or nil if the parameter is not optional.
+func (fn *Function) ParamDefault(i int) Value {
+	if i < 0 || i >= fn.NumParams() {
+		panic(i)
+	}
+
+	// fn.defaults omits all required params up to the first optional param. It
+	// also does not include *args or **kwargs at the end.
+	firstOptIdx := fn.NumParams() - len(fn.defaults)
+	if fn.HasVarargs() {
+		firstOptIdx--
+	}
+	if fn.HasKwargs() {
+		firstOptIdx--
+	}
+	if i < firstOptIdx || i >= firstOptIdx+len(fn.defaults) {
+		return nil
+	}
+
+	dflt := fn.defaults[i-firstOptIdx]
+	if _, ok := dflt.(mandatory); ok {
+		return nil
+	}
+	return dflt
+}
+
 func (fn *Function) HasVarargs() bool { return fn.funcode.HasVarargs }
 func (fn *Function) HasKwargs() bool  { return fn.funcode.HasKwargs }
 
@@ -794,6 +822,14 @@ func (d *Dict) Type() string                                    { return "dict" 
 func (d *Dict) Freeze()                                         { d.ht.freeze() }
 func (d *Dict) Truth() Bool                                     { return d.Len() > 0 }
 func (d *Dict) Hash() (uint32, error)                           { return 0, fmt.Errorf("unhashable type: dict") }
+
+func (x *Dict) Union(y *Dict) *Dict {
+	z := new(Dict)
+	z.ht.init(x.Len()) // a lower bound
+	z.ht.addAll(&x.ht) // can't fail
+	z.ht.addAll(&y.ht) // can't fail
+	return z
+}
 
 func (d *Dict) Attr(name string) (Value, error) { return builtinAttr(d, name, dictMethods) }
 func (d *Dict) AttrNames() []string             { return builtinAttrNames(dictMethods) }
