@@ -47,6 +47,10 @@ func NewClient(log *zap.Logger, config Config) Client {
 }
 
 func (c Client) PackageCharts(chartsDir string) (charts map[string]*chart.Chart, cleanup func(), err error) {
+	if stat, err := os.Stat(chartsDir); err != nil || !stat.IsDir() {
+		return nil, nil, fmt.Errorf("charts dir %s does not exist", chartsDir)
+	}
+
 	chartsPaths, err := c.getChartsPaths(chartsDir)
 	if err != nil {
 		return nil, nil, err
