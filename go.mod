@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v36 v36.0.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.6.0
-	helm.sh/helm/v3 v3.11.1
+	helm.sh/helm/v3 v3.11.2
 )
 
 require (
