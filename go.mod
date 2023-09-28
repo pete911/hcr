@@ -6,7 +6,7 @@ require (
 	github.com/google/go-github/v36 v36.0.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/oauth2 v0.12.0
-	helm.sh/helm/v3 v3.12.3
+	helm.sh/helm/v3 v3.13.0
 )
 
 require (
@@ -18,12 +18,13 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Masterminds/squirrel v1.5.4 // indirect
+	github.com/Microsoft/hcsshim v0.11.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
-	github.com/containerd/containerd v1.7.5 // indirect
-	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
+	github.com/containerd/containerd v1.7.6 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/cli v24.0.5+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
@@ -124,16 +125,16 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.28.1 // indirect
-	k8s.io/apiextensions-apiserver v0.28.1 // indirect
-	k8s.io/apimachinery v0.28.1 // indirect
-	k8s.io/apiserver v0.28.1 // indirect
-	k8s.io/cli-runtime v0.28.1 // indirect
-	k8s.io/client-go v0.28.1 // indirect
-	k8s.io/component-base v0.28.1 // indirect
+	k8s.io/api v0.28.2 // indirect
+	k8s.io/apiextensions-apiserver v0.28.2 // indirect
+	k8s.io/apimachinery v0.28.2 // indirect
+	k8s.io/apiserver v0.28.2 // indirect
+	k8s.io/cli-runtime v0.28.2 // indirect
+	k8s.io/client-go v0.28.2 // indirect
+	k8s.io/component-base v0.28.2 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230816210353-14e408962443 // indirect
-	k8s.io/kubectl v0.28.1 // indirect
+	k8s.io/kubectl v0.28.2 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	oras.land/oras-go v1.2.3 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
