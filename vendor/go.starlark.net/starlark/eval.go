@@ -7,7 +7,6 @@ package starlark
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"sort"
@@ -416,7 +415,7 @@ func FileProgram(f *syntax.File, isPredeclared func(string) bool) (*Program, err
 // CompiledProgram produces a new program from the representation
 // of a compiled program previously saved by Program.Write.
 func CompiledProgram(in io.Reader) (*Program, error) {
-	data, err := ioutil.ReadAll(in)
+	data, err := io.ReadAll(in)
 	if err != nil {
 		return nil, err
 	}
@@ -826,6 +825,12 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 				}
 				return x - yf, nil
 			}
+		case *Set: // difference
+			if y, ok := y.(*Set); ok {
+				iter := y.Iterate()
+				defer iter.Done()
+				return x.Difference(iter)
+			}
 		}
 
 	case syntax.STAR:
@@ -1097,17 +1102,9 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 			}
 		case *Set: // intersection
 			if y, ok := y.(*Set); ok {
-				set := new(Set)
-				if x.Len() > y.Len() {
-					x, y = y, x // opt: range over smaller set
-				}
-				for xe := x.ht.head; xe != nil; xe = xe.next {
-					// Has, Insert cannot fail here.
-					if found, _ := y.Has(xe.key); found {
-						set.Insert(xe.key)
-					}
-				}
-				return set, nil
+				iter := y.Iterate()
+				defer iter.Done()
+				return x.Intersection(iter)
 			}
 		}
 
@@ -1119,18 +1116,9 @@ func Binary(op syntax.Token, x, y Value) (Value, error) {
 			}
 		case *Set: // symmetric difference
 			if y, ok := y.(*Set); ok {
-				set := new(Set)
-				for xe := x.ht.head; xe != nil; xe = xe.next {
-					if found, _ := y.Has(xe.key); !found {
-						set.Insert(xe.key)
-					}
-				}
-				for ye := y.ht.head; ye != nil; ye = ye.next {
-					if found, _ := x.Has(ye.key); !found {
-						set.Insert(ye.key)
-					}
-				}
-				return set, nil
+				iter := y.Iterate()
+				defer iter.Done()
+				return x.SymmetricDifference(iter)
 			}
 		}
 
@@ -1671,9 +1659,14 @@ func interpolate(format string, x Value) (Value, error) {
 		index++
 	}
 
-	if index < nargs {
+	if index < nargs && !is[Mapping](x) {
 		return nil, fmt.Errorf("too many arguments for format string")
 	}
 
 	return String(buf.String()), nil
+}
+
+func is[T any](x any) bool {
+	_, ok := x.(T)
+	return ok
 }
